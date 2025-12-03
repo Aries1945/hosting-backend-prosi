@@ -1,21 +1,36 @@
 const config = require("../config/db.config.js");
 
 const Sequelize = require("sequelize");
+
+// Log connection details (without password for security)
+console.log("🔌 Database Connection Config:");
+console.log(`   Host: ${config.HOST}`);
+console.log(`   Port: ${config.port || 5432}`);
+console.log(`   Database: ${config.DB}`);
+console.log(`   User: ${config.USER}`);
+console.log(`   Password: ${config.PASSWORD ? '***' : '(empty)'}`);
+
+const sequelizeConfig = {
+  host: config.HOST,
+  dialect: config.dialect,
+  pool: {
+    max: config.pool.max,
+    min: config.pool.min,
+    acquire: config.pool.acquire,
+    idle: config.pool.idle
+  }
+};
+
+// Add port if specified
+if (config.port) {
+  sequelizeConfig.port = config.port;
+}
+
 const sequelize = new Sequelize(
   config.DB,
   config.USER,
   config.PASSWORD,
-  {
-    host: config.HOST,
-    dialect: config.dialect,
-    operatorsAliases: false,
-    pool: {
-      max: config.pool.max,
-      min: config.pool.min,
-      acquire: config.pool.acquire,
-      idle: config.pool.idle
-    }
-  }
+  sequelizeConfig
 );
 
 const db = {};

@@ -39,9 +39,11 @@ dbConfig.USER = process.env.DB_USER || process.env.USER || dbConfig.USER;
 dbConfig.PASSWORD = process.env.DB_PASSWORD || process.env.PASSWORD || dbConfig.PASSWORD;
 dbConfig.DB = process.env.DB_NAME || process.env.DB || dbConfig.DB;
 
-// Add port if specified
-if (process.env.DB_PORT || process.env.PORT) {
-  dbConfig.port = process.env.DB_PORT || process.env.PORT;
+// Add port if specified (DB_PORT for database, PORT is usually for app server)
+if (process.env.DB_PORT) {
+  dbConfig.port = parseInt(process.env.DB_PORT);
+} else if (process.env.DATABASE_PORT) {
+  dbConfig.port = parseInt(process.env.DATABASE_PORT);
 }
 
 module.exports = dbConfig;

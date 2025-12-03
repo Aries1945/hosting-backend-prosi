@@ -70,6 +70,17 @@ db.sequelize.sync({ alter: true })
     });
   })
   .catch(err => {
-    console.error("❌ Failed to sync database:", err);
+    console.error("❌ Failed to sync database:", err.message);
+    console.error("\n💡 Troubleshooting tips:");
+    console.error("   1. Check if database server is running");
+    console.error("   2. Verify DATABASE_PUBLIC_URL or DB_HOST, DB_USER, DB_PASSWORD, DB_NAME are set correctly");
+    console.error("   3. Check if database is accessible from this container/network");
+    console.error("   4. Verify firewall rules allow connection to database port");
+    console.error("   5. For Docker: ensure database container is running and on same network");
+    console.error("\n📋 Current connection attempt:");
+    const dbConfig = require("./config/db.config.js");
+    console.error(`   Host: ${dbConfig.HOST}:${dbConfig.port || 5432}`);
+    console.error(`   Database: ${dbConfig.DB}`);
+    console.error(`   User: ${dbConfig.USER}`);
     process.exit(1); // Exit if database sync fails
   });
