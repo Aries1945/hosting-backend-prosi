@@ -13,9 +13,16 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow requests with no origin (like mobile apps, Postman, or same-origin requests)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Check if the origin is in the allowed list
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.warn(`⚠️ CORS blocked origin: ${origin}`);
       callback(new Error("Not allowed by CORS"));
     }
   },
@@ -26,16 +33,20 @@ const corsOptions = {
     "Origin",
     "Content-Type",
     "Accept",
-    "Cache-Control",       // ✅ ini yang sebelumnya kurang
+    "Cache-Control",
     "Pragma",
-    "Expires"
+    "Expires",
+    "X-Requested-With"
   ],
-  credentials: true
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
-
 
 // ✅ Pasang middleware CORS
 app.use(cors(corsOptions));
+
+// ✅ Explicitly handle OPTIONS requests for all routes
 app.options("*", cors(corsOptions));
 // ✅ Parsing request body
 app.use(express.json());
