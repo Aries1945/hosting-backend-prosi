@@ -3,13 +3,7 @@ const controller = require("../controllers/questionSet.controller");
 const fileController = require("../controllers/file.controller");
 
 module.exports = function(app) {
-  app.use(function(req, res, next) {
-    res.header(
-      "Access-Control-Allow-Headers",
-      "x-access-token, Origin, Content-Type, Accept"
-    );
-    next();
-  });
+  // CORS sudah dihandle global di server.js, tidak perlu middleware tambahan
 
   // ==================== IMPORTANT: SPECIFIC ROUTES FIRST! ====================
   // These must come BEFORE generic /:id routes to avoid conflicts

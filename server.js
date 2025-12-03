@@ -5,30 +5,29 @@ const db = require("./models"); // Sequelize setup
 
 const app = express();
 
-// ✅ Daftar domain Frontend yang diizinkan (bisa ditambah)
+// ✅ Daftar domain Frontend yang diizinkan
 const allowedOrigins = [
   "https://www.sibaso.site",
   "https://sibaso.site"
 ];
 
+// ✅ CORS Configuration - Simple and Robust
 const corsOptions = {
   origin: function (origin, callback) {
-    // Log for debugging
-    console.log(`🔍 CORS check - Origin: ${origin || 'no origin'}`);
+    // Log untuk debugging
+    console.log(`🔍 CORS Origin Check: ${origin || '(no origin)'}`);
     
-    // Allow requests with no origin (like mobile apps, Postman, or same-origin requests)
+    // Allow requests dengan no origin (Postman, mobile apps, dll)
     if (!origin) {
-      console.log("✅ Allowing request with no origin");
       return callback(null, true);
     }
     
-    // Check if the origin is in the allowed list
+    // Check jika origin ada di allowed list
     if (allowedOrigins.includes(origin)) {
-      console.log(`✅ CORS allowed for origin: ${origin}`);
+      console.log(`✅ CORS Allowed: ${origin}`);
       callback(null, true);
     } else {
-      console.warn(`⚠️ CORS blocked origin: ${origin}`);
-      console.warn(`   Allowed origins: ${allowedOrigins.join(", ")}`);
+      console.warn(`❌ CORS Blocked: ${origin}`);
       callback(new Error("Not allowed by CORS"));
     }
   },
@@ -37,41 +36,45 @@ const corsOptions = {
     "Authorization",
     "x-access-token",
     "Origin",
+    "X-Requested-With",
     "Content-Type",
     "Accept",
     "Cache-Control",
     "Pragma",
-    "Expires",
-    "X-Requested-With"
+    "Expires"
   ],
   credentials: true,
-  preflightContinue: false,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 200 // Some browsers expect 200 instead of 204
 };
 
-// ✅ Handle OPTIONS requests FIRST (before CORS middleware)
-// This ensures preflight requests are handled correctly
-app.options("*", (req, res) => {
+// ✅ Apply CORS middleware FIRST - before everything else
+app.use(cors(corsOptions));
+
+// ✅ Explicit OPTIONS handler untuk semua routes (preflight)
+app.options("*", cors(corsOptions));
+
+// ✅ Safety net: Global middleware untuk memastikan CORS headers selalu ada
+app.use((req, res, next) => {
   const origin = req.headers.origin;
-  console.log(`🔍 OPTIONS preflight request from origin: ${origin}`);
   
+  // Jika origin ada di allowed list, set CORS headers
   if (origin && allowedOrigins.includes(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, Content-Type, Accept, Cache-Control, Pragma, Expires, X-Requested-With");
     res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Max-Age", "86400");
-    console.log(`✅ OPTIONS preflight allowed for: ${origin}`);
-    return res.status(204).send();
   }
   
-  console.warn(`⚠️ OPTIONS preflight blocked for: ${origin}`);
-  res.status(403).json({ error: "Not allowed by CORS" });
+  // Handle preflight OPTIONS requests
+  if (req.method === "OPTIONS") {
+    if (origin && allowedOrigins.includes(origin)) {
+      res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+      res.header("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
+      res.header("Access-Control-Max-Age", "86400");
+      return res.status(200).end();
+    }
+  }
+  
+  next();
 });
-
-// ✅ Pasang middleware CORS - handles actual requests
-// This handles both preflight (OPTIONS) and actual requests
-app.use(cors(corsOptions));
 
 // ✅ Parsing request body
 app.use(express.json());

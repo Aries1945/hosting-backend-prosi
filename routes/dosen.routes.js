@@ -4,14 +4,7 @@ const dosenController = require('../controllers/dosen.controller');
 // const { authJwt } = require('../middlewares'); // Asumsi path middleware Anda
 
 module.exports = (app) => {
-    // Tambahkan header untuk CORS, atau biarkan di server.js jika sudah global
-    app.use(function(req, res, next) {
-        res.header(
-            "Access-Control-Allow-Headers",
-            "x-access-token, Origin, Content-Type, Accept"
-        );
-        next();
-    });
+    // CORS sudah dihandle global di server.js, tidak perlu middleware tambahan
 
     // Anda HARUS MENAMBAHKAN middleware otentikasi/otorisasi di sini
     // Contoh:
