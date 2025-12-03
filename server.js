@@ -13,16 +13,22 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
+    // Log for debugging
+    console.log(`🔍 CORS check - Origin: ${origin || 'no origin'}`);
+    
     // Allow requests with no origin (like mobile apps, Postman, or same-origin requests)
     if (!origin) {
+      console.log("✅ Allowing request with no origin");
       return callback(null, true);
     }
     
     // Check if the origin is in the allowed list
     if (allowedOrigins.includes(origin)) {
+      console.log(`✅ CORS allowed for origin: ${origin}`);
       callback(null, true);
     } else {
       console.warn(`⚠️ CORS blocked origin: ${origin}`);
+      console.warn(`   Allowed origins: ${allowedOrigins.join(", ")}`);
       callback(new Error("Not allowed by CORS"));
     }
   },
@@ -43,11 +49,30 @@ const corsOptions = {
   optionsSuccessStatus: 204
 };
 
-// ✅ Pasang middleware CORS
+// ✅ Handle OPTIONS requests FIRST (before CORS middleware)
+// This ensures preflight requests are handled correctly
+app.options("*", (req, res) => {
+  const origin = req.headers.origin;
+  console.log(`🔍 OPTIONS preflight request from origin: ${origin}`);
+  
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, Content-Type, Accept, Cache-Control, Pragma, Expires, X-Requested-With");
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Max-Age", "86400");
+    console.log(`✅ OPTIONS preflight allowed for: ${origin}`);
+    return res.status(204).send();
+  }
+  
+  console.warn(`⚠️ OPTIONS preflight blocked for: ${origin}`);
+  res.status(403).json({ error: "Not allowed by CORS" });
+});
+
+// ✅ Pasang middleware CORS - handles actual requests
+// This handles both preflight (OPTIONS) and actual requests
 app.use(cors(corsOptions));
 
-// ✅ Explicitly handle OPTIONS requests for all routes
-app.options("*", cors(corsOptions));
 // ✅ Parsing request body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
