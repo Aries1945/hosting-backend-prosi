@@ -36,7 +36,7 @@ const corsOptions = {
 
 // ✅ Pasang middleware CORS
 app.use(cors(corsOptions));
-
+app.options("*", cors(corsOptions));
 // ✅ Parsing request body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
