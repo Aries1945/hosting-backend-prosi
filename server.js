@@ -1,4 +1,3 @@
-require('dotenv').config();
 const express = require("express");
 const cors = require("cors");
 const db = require("./models"); // Sequelize setup
@@ -19,24 +18,14 @@ const corsOptions = {
       callback(new Error("Not allowed by CORS"));
     }
   },
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Authorization",
-    "x-access-token",
-    "Origin",
-    "Content-Type",
-    "Accept",
-    "Cache-Control",       // ✅ ini yang sebelumnya kurang
-    "Pragma",
-    "Expires"
-  ],
+  methods: ["GET", "POST", "PUT", "PATCH","DELETE", "OPTIONS"],
+  allowedHeaders: ["Authorization", "x-access-token", "Origin", "Content-Type", "Accept","Cache-Control","Pragma","Expires"],
   credentials: true
 };
 
-
 // ✅ Pasang middleware CORS
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+
 // ✅ Parsing request body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
