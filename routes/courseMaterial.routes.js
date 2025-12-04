@@ -417,14 +417,18 @@ app.delete("/api/course-material-assignments/course/:courseId/material/:material
     
     // Statistics endpoint for backward compatibility
     app.get("/api/course-material-stats", async (req, res) => {
+        // Set CORS headers FIRST - before any processing
+        const origin = req.headers.origin;
+        const allowedOrigins = ["https://www.sibaso.site", "https://sibaso.site"];
+        
+        if (origin && allowedOrigins.includes(origin)) {
+            res.setHeader("Access-Control-Allow-Origin", origin);
+            res.setHeader("Access-Control-Allow-Credentials", "true");
+            res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+            res.setHeader("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
+        }
+        
         try {
-            // Set CORS headers explicitly as safety net
-            const origin = req.headers.origin;
-            if (origin && (origin === "https://www.sibaso.site" || origin === "https://sibaso.site")) {
-                res.setHeader("Access-Control-Allow-Origin", origin);
-                res.setHeader("Access-Control-Allow-Credentials", "true");
-            }
-            
             console.log(`📥 GET /api/course-material-stats (compatibility)`);
             
             const courses = await db.courseTag.findAll({
@@ -463,11 +467,12 @@ app.delete("/api/course-material-assignments/course/:courseId/material/:material
             res.json(stats);
 
         } catch (error) {
-            // Set CORS headers even on error
-            const origin = req.headers.origin;
-            if (origin && (origin === "https://www.sibaso.site" || origin === "https://sibaso.site")) {
+            // Ensure CORS headers are set even on error
+            if (origin && allowedOrigins.includes(origin)) {
                 res.setHeader("Access-Control-Allow-Origin", origin);
                 res.setHeader("Access-Control-Allow-Credentials", "true");
+                res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+                res.setHeader("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
             }
             
             console.error("❌ Error fetching course statistics:", error);
