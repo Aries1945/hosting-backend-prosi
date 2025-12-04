@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require("express");
 const cors = require("cors");
-const db = require("./models");
+const db = require("./models"); // Sequelize setup
 
 const app = express();
 
@@ -11,12 +11,12 @@ const allowedOrigins = [
   "https://sibaso.site"
 ];
 
-// ✅ CORS Configuration - SIMPLIFIED AND WORKING
+// ✅ CORS Configuration - ULTRA SIMPLE - Let CORS middleware handle everything
 const corsOptions = {
   origin: function (origin, callback) {
-    console.log(`🔍 CORS Check: ${origin || '(no origin)'}`);
+    console.log(`🔍 CORS Origin Check: ${origin || '(no origin)'}`);
     
-    // Allow requests dengan no origin (Postman, curl, etc.)
+    // Allow requests dengan no origin (Postman, mobile apps, dll)
     if (!origin) {
       return callback(null, true);
     }
@@ -27,7 +27,7 @@ const corsOptions = {
       callback(null, true);
     } else {
       console.warn(`❌ CORS Blocked: ${origin}`);
-      callback(null, false); // Don't throw error, just deny
+      callback(new Error("Not allowed by CORS"));
     }
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -43,44 +43,31 @@ const corsOptions = {
     "Expires"
   ],
   credentials: true,
-  optionsSuccessStatus: 204, // ⚠️ CRITICAL: Must be 204, not 200!
-  preflightContinue: false,
-  maxAge: 86400 // Cache preflight for 24 hours
+  optionsSuccessStatus: 200
 };
 
-// ✅ CRITICAL FIX: Single early OPTIONS handler with correct status code
+// ✅ Apply CORS middleware FIRST - handles ALL CORS including OPTIONS
+app.use(cors(corsOptions));
+
+// ✅ Explicit OPTIONS handler untuk SEMUA routes - backup protection
+app.options("*", cors(corsOptions));
+
+// ✅ Safety net: Pastikan CORS headers SELALU ada untuk SEMUA response
 app.use((req, res, next) => {
-  if (req.method === "OPTIONS") {
-    const origin = req.headers.origin;
-    console.log(`🚨 OPTIONS Request: ${req.path} from ${origin || '(no origin)'}`);
-    
-    if (!origin || allowedOrigins.includes(origin)) {
-      console.log(`✅ OPTIONS Approved for: ${origin || '(no origin)'}`);
-      
-      // Set all required CORS headers
-      if (origin) {
-        res.setHeader("Access-Control-Allow-Origin", origin);
-      }
-      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-      res.setHeader("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
-      res.setHeader("Access-Control-Allow-Credentials", "true");
-      res.setHeader("Access-Control-Max-Age", "86400");
-      
-      // ⚠️ CRITICAL: Return 204 No Content (not 200!)
-      return res.status(204).end();
-    }
-    
-    // If origin not allowed, still respond but without credentials
-    console.warn(`⚠️ OPTIONS Denied for: ${origin}`);
-    return res.status(204).end();
+  const origin = req.headers.origin;
+  
+  // Set CORS headers untuk SEMUA response jika origin diizinkan
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
   }
+  
   next();
 });
 
-// ✅ Apply CORS middleware for actual requests
-app.use(cors(corsOptions));
-
-// ✅ Parsing request body (AFTER CORS)
+// ✅ Parsing request body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -96,7 +83,7 @@ const dropdownRoutes = require('./routes/dropdown.routes');
 const courseMaterialRoutes = require('./routes/courseMaterial.routes');
 const questionPackageRoutes = require('./routes/questionPackage.routes');
 
-// ✅ Register routes
+// ✅ Register route ke Express
 courseMaterialRoutes(app);
 authRoutes(app);
 userRoutes(app);
@@ -108,10 +95,11 @@ materialRoutes(app);
 dropdownRoutes(app);
 questionPackageRoutes(app);
 
-// ✅ Error handler with CORS
+// ✅ Error handler - Pastikan CORS headers tetap ada saat error
 app.use((err, req, res, next) => {
   const origin = req.headers.origin;
   
+  // Set CORS headers bahkan saat error
   if (origin && allowedOrigins.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -124,29 +112,29 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ✅ 404 handler with CORS
+// ✅ 404 handler - Pastikan CORS headers tetap ada untuk 404
 app.use((req, res) => {
   const origin = req.headers.origin;
   
+  // Set CORS headers untuk 404
   if (origin && allowedOrigins.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
   }
   
-  console.log(`❌ 404: ${req.method} ${req.path}`);
   res.status(404).json({ message: "Route not found" });
 });
 
 // ✅ Port Railway atau default ke 8080
 const PORT = process.env.PORT || 8080;
 
-// ✅ Sync database + start server
+// ✅ Sync database SEKALI + start server SEKALI
 db.sequelize.sync({ alter: true })
   .then(() => {
     console.log("✅ Database synchronized");
+
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`🌐 Allowed origins: ${allowedOrigins.join(', ')}`);
+      console.log(`🚀 Server is running on port ${PORT}`);
     });
   })
   .catch(err => {
