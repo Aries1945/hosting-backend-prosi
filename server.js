@@ -11,62 +11,7 @@ const allowedOrigins = [
   "https://sibaso.site"
 ];
 
-// ✅ CRITICAL: Handle OPTIONS requests FIRST - before ANY other middleware
-// Ini HARUS dipanggil paling awal untuk menangani preflight requests
-const handleOptions = (req, res) => {
-  try {
-    const origin = req.headers.origin;
-    const path = req.path || req.url;
-    console.log(`🔍 OPTIONS Preflight Request: ${req.method} ${path} from: ${origin || '(no origin)'}`);
-    
-    if (origin && allowedOrigins.includes(origin)) {
-      console.log(`✅ OPTIONS Allowed for: ${origin} on path: ${path}`);
-      res.setHeader("Access-Control-Allow-Origin", origin);
-      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-      res.setHeader("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
-      res.setHeader("Access-Control-Allow-Credentials", "true");
-      res.setHeader("Access-Control-Max-Age", "86400");
-      res.status(200).end();
-      return;
-    } else {
-      console.warn(`❌ OPTIONS Blocked for: ${origin} on path: ${path}`);
-      // Tetap kirim response meskipun origin tidak diizinkan (untuk debugging)
-      if (origin) {
-        res.setHeader("Access-Control-Allow-Origin", origin);
-      }
-      res.status(403).json({ error: "CORS: Origin not allowed" });
-      return;
-    }
-  } catch (error) {
-    console.error("❌ Error in handleOptions:", error);
-    const origin = req.headers.origin;
-    if (origin && allowedOrigins.includes(origin)) {
-      res.setHeader("Access-Control-Allow-Origin", origin);
-      res.setHeader("Access-Control-Allow-Credentials", "true");
-    }
-    res.status(500).json({ error: "Internal server error in CORS handler" });
-  }
-};
-
-// ✅ CRITICAL: Middleware untuk menangkap SEMUA OPTIONS requests
-// Ini HARUS dipanggil sebelum middleware lainnya
-app.use((req, res, next) => {
-  if (req.method === "OPTIONS") {
-    console.log(`🚨 OPTIONS caught by global middleware: ${req.path || req.url}`);
-    handleOptions(req, res);
-    return; // Jangan panggil next() untuk OPTIONS
-  }
-  next();
-});
-
-// Handle OPTIONS untuk semua routes (backup)
-app.options("*", handleOptions);
-
-// Handle OPTIONS khusus untuk routes yang sering digunakan (double protection)
-app.options("/api/auth/signin", handleOptions);
-app.options("/api/course-material-stats", handleOptions);
-
-// ✅ CORS Configuration untuk actual requests
+// ✅ CORS Configuration - SIMPLE AND DIRECT
 const corsOptions = {
   origin: function (origin, callback) {
     // Log untuk debugging
@@ -99,20 +44,32 @@ const corsOptions = {
     "Expires"
   ],
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  preflightContinue: false
 };
 
-// ✅ Apply CORS middleware untuk actual requests (bukan OPTIONS)
+// ✅ Apply CORS middleware FIRST - handles both OPTIONS and actual requests
 app.use(cors(corsOptions));
 
-// ✅ Safety net: Pastikan CORS headers selalu ada untuk semua response
+// ✅ Explicit OPTIONS handler for all routes (backup)
+app.options("*", cors(corsOptions));
+
+// ✅ Safety net: Pastikan CORS headers SELALU ada untuk SEMUA response
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
-  // Set CORS headers untuk semua response jika origin diizinkan
+  // Set CORS headers untuk SEMUA response jika origin diizinkan
   if (origin && allowedOrigins.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
+  }
+  
+  // Handle OPTIONS requests explicitly
+  if (req.method === "OPTIONS") {
+    console.log(`🚨 OPTIONS Request: ${req.path || req.url} from: ${origin || '(no origin)'}`);
+    return res.status(200).end();
   }
   
   next();
