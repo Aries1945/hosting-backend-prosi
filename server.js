@@ -48,13 +48,40 @@ const corsOptions = {
   preflightContinue: false
 };
 
-// ✅ Apply CORS middleware FIRST - handles both OPTIONS and actual requests
+// ✅ CRITICAL: Handle OPTIONS requests FIRST - before CORS middleware
+// Ini memastikan preflight requests ditangani dengan benar
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    const origin = req.headers.origin;
+    const path = req.path || req.url;
+    console.log(`🚨 OPTIONS Request caught early: ${path} from: ${origin || '(no origin)'}`);
+    
+    if (origin && allowedOrigins.includes(origin)) {
+      console.log(`✅ OPTIONS Allowed early for: ${origin} on path: ${path}`);
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Access-Control-Max-Age", "86400");
+      return res.status(200).end();
+    }
+    
+    // Tetap kirim response untuk debugging
+    if (origin) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+    }
+    return res.status(200).end();
+  }
+  next();
+});
+
+// ✅ Apply CORS middleware - handles both OPTIONS and actual requests
 app.use(cors(corsOptions));
 
 // ✅ Explicit OPTIONS handler for all routes (backup)
 app.options("*", cors(corsOptions));
 
-// ✅ Explicit OPTIONS handler khusus untuk course-material-stats (double protection)
+// ✅ Explicit OPTIONS handler khusus untuk course-material-stats (triple protection)
 app.options("/api/course-material-stats", (req, res) => {
   const origin = req.headers.origin;
   console.log(`🔍 OPTIONS Preflight for /api/course-material-stats from: ${origin || '(no origin)'}`);
@@ -73,14 +100,15 @@ app.options("/api/course-material-stats", (req, res) => {
   if (origin) {
     res.setHeader("Access-Control-Allow-Origin", origin);
   }
-  res.status(403).json({ error: "CORS: Origin not allowed" });
+  res.status(200).end();
 });
 
-// ✅ Safety net: Pastikan CORS headers SELALU ada untuk SEMUA response (kecuali OPTIONS - sudah dihandle CORS middleware)
+// ✅ Safety net: Pastikan CORS headers SELALU ada untuk SEMUA response
+// OPTIONS sudah dihandle di middleware sebelumnya, jadi skip di sini
 app.use((req, res, next) => {
-  // JANGAN handle OPTIONS di sini - biarkan CORS middleware yang handle
+  // Skip OPTIONS - sudah dihandle sebelumnya
   if (req.method === "OPTIONS") {
-    return next(); // Biarkan CORS middleware handle OPTIONS
+    return next();
   }
   
   const origin = req.headers.origin;
