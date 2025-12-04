@@ -416,20 +416,10 @@ app.delete("/api/course-material-assignments/course/:courseId/material/:material
     // ========================================
     
     // Statistics endpoint for backward compatibility
+    // Statistics endpoint - NO MANUAL CORS NEEDED!
     app.get("/api/course-material-stats", async (req, res) => {
-        // Set CORS headers FIRST - before any processing
-        const origin = req.headers.origin;
-        const allowedOrigins = ["https://www.sibaso.site", "https://sibaso.site"];
-        
-        if (origin && allowedOrigins.includes(origin)) {
-            res.setHeader("Access-Control-Allow-Origin", origin);
-            res.setHeader("Access-Control-Allow-Credentials", "true");
-            res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-            res.setHeader("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
-        }
-        
         try {
-            console.log(`📥 GET /api/course-material-stats (compatibility)`);
+            console.log(`📥 GET /api/course-material-stats`);
             
             const courses = await db.courseTag.findAll({
                 attributes: ['id', 'name'],
@@ -440,7 +430,6 @@ app.delete("/api/course-material-assignments/course/:courseId/material/:material
             const stats = await Promise.all(courses.map(async (course) => {
                 let assignmentCount = 0;
                 
-                // Get assignments count
                 try {
                     const assignmentResult = await db.sequelize.query(
                         'SELECT COUNT(*) as count FROM course_material_assignments WHERE course_tag_id = $1',
@@ -451,7 +440,7 @@ app.delete("/api/course-material-assignments/course/:courseId/material/:material
                     );
                     assignmentCount = parseInt(assignmentResult[0].count) || 0;
                 } catch (assignmentError) {
-                    console.log(`⚠️ Could not count assignments for course ${course.id}: ${assignmentError.message}`);
+                    console.log(`⚠️ Could not count assignments for course ${course.id}`);
                     assignmentCount = 0;
                 }
 
@@ -459,22 +448,14 @@ app.delete("/api/course-material-assignments/course/:courseId/material/:material
                     id: course.id,
                     name: course.name,
                     material_count: assignmentCount.toString(),
-                    question_set_count: "0" // Placeholder
+                    question_set_count: "0"
                 };
             }));
 
-            console.log(`✅ Compatibility statistics calculated for ${stats.length} courses`);
+            console.log(`✅ Statistics calculated for ${stats.length} courses`);
             res.json(stats);
 
         } catch (error) {
-            // Ensure CORS headers are set even on error
-            if (origin && allowedOrigins.includes(origin)) {
-                res.setHeader("Access-Control-Allow-Origin", origin);
-                res.setHeader("Access-Control-Allow-Credentials", "true");
-                res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-                res.setHeader("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
-            }
-            
             console.error("❌ Error fetching course statistics:", error);
             res.status(500).json({
                 success: false,
