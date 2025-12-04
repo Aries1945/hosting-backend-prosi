@@ -2,6 +2,7 @@
 const db = require("../models");
 
 module.exports = (app) => {
+    // CORS sudah dihandle global di server.js, tidak perlu middleware tambahan
     
     // ========================================
     // ASSIGNMENT SYSTEM ROUTES (Junction Table)
@@ -417,6 +418,13 @@ app.delete("/api/course-material-assignments/course/:courseId/material/:material
     // Statistics endpoint for backward compatibility
     app.get("/api/course-material-stats", async (req, res) => {
         try {
+            // Set CORS headers explicitly as safety net
+            const origin = req.headers.origin;
+            if (origin && (origin === "https://www.sibaso.site" || origin === "https://sibaso.site")) {
+                res.setHeader("Access-Control-Allow-Origin", origin);
+                res.setHeader("Access-Control-Allow-Credentials", "true");
+            }
+            
             console.log(`📥 GET /api/course-material-stats (compatibility)`);
             
             const courses = await db.courseTag.findAll({
@@ -455,6 +463,13 @@ app.delete("/api/course-material-assignments/course/:courseId/material/:material
             res.json(stats);
 
         } catch (error) {
+            // Set CORS headers even on error
+            const origin = req.headers.origin;
+            if (origin && (origin === "https://www.sibaso.site" || origin === "https://sibaso.site")) {
+                res.setHeader("Access-Control-Allow-Origin", origin);
+                res.setHeader("Access-Control-Allow-Credentials", "true");
+            }
+            
             console.error("❌ Error fetching course statistics:", error);
             res.status(500).json({
                 success: false,

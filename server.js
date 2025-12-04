@@ -14,24 +14,37 @@ const allowedOrigins = [
 // ✅ CRITICAL: Handle OPTIONS requests FIRST - before ANY other middleware
 // Ini HARUS dipanggil paling awal untuk menangani preflight requests
 const handleOptions = (req, res) => {
-  const origin = req.headers.origin;
-  console.log(`🔍 OPTIONS Preflight Request: ${req.method} ${req.path} from: ${origin || '(no origin)'}`);
-  
-  if (origin && allowedOrigins.includes(origin)) {
-    console.log(`✅ OPTIONS Allowed for: ${origin}`);
-    res.header("Access-Control-Allow-Origin", origin);
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Max-Age", "86400");
-    return res.status(200).end();
-  } else {
-    console.warn(`❌ OPTIONS Blocked for: ${origin}`);
-    // Tetap kirim response meskipun origin tidak diizinkan (untuk debugging)
-    if (origin) {
-      res.header("Access-Control-Allow-Origin", origin);
+  try {
+    const origin = req.headers.origin;
+    const path = req.path || req.url;
+    console.log(`🔍 OPTIONS Preflight Request: ${req.method} ${path} from: ${origin || '(no origin)'}`);
+    
+    if (origin && allowedOrigins.includes(origin)) {
+      console.log(`✅ OPTIONS Allowed for: ${origin} on path: ${path}`);
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Access-Control-Max-Age", "86400");
+      res.status(200).end();
+      return;
+    } else {
+      console.warn(`❌ OPTIONS Blocked for: ${origin} on path: ${path}`);
+      // Tetap kirim response meskipun origin tidak diizinkan (untuk debugging)
+      if (origin) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+      }
+      res.status(403).json({ error: "CORS: Origin not allowed" });
+      return;
     }
-    return res.status(403).json({ error: "CORS: Origin not allowed" });
+  } catch (error) {
+    console.error("❌ Error in handleOptions:", error);
+    const origin = req.headers.origin;
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+    res.status(500).json({ error: "Internal server error in CORS handler" });
   }
 };
 
@@ -39,7 +52,9 @@ const handleOptions = (req, res) => {
 // Ini HARUS dipanggil sebelum middleware lainnya
 app.use((req, res, next) => {
   if (req.method === "OPTIONS") {
-    return handleOptions(req, res);
+    console.log(`🚨 OPTIONS caught by global middleware: ${req.path || req.url}`);
+    handleOptions(req, res);
+    return; // Jangan panggil next() untuk OPTIONS
   }
   next();
 });
