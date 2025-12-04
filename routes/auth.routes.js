@@ -16,24 +16,4 @@ module.exports = function(app) {
 
   // Debug endpoint to check database status
   app.get("/api/auth/debug/check-database", controller.checkDatabase);
-
-  // ========================================
-  // PASSWORD RESET ROUTES (NEW)
-  // ========================================
-  
-  // Request password reset (send email with reset link)
-  app.post('/api/auth/forgot-password', async (req, res) => {
-    controller.forgotPassword
-});
-
-  // Validate reset token
-  app.post(
-    "/api/auth/validate-reset-token",
-    controller.validateResetToken
-  );
-
-  // Reset password with token
-  app.post("/api/auth/reset-password",
-    controller.resetPassword
-  );
 };
