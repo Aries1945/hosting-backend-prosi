@@ -416,18 +416,8 @@ app.delete("/api/course-material-assignments/course/:courseId/material/:material
     // ========================================
     
     // Statistics endpoint for backward compatibility
+    // CORS sudah dihandle global di server.js, sama seperti /api/auth/signin
     app.get("/api/course-material-stats", async (req, res) => {
-        // Set CORS headers FIRST - before any processing
-        const origin = req.headers.origin;
-        const allowedOrigins = ["https://www.sibaso.site", "https://sibaso.site"];
-        
-        if (origin && allowedOrigins.includes(origin)) {
-            res.setHeader("Access-Control-Allow-Origin", origin);
-            res.setHeader("Access-Control-Allow-Credentials", "true");
-            res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-            res.setHeader("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
-        }
-        
         try {
             console.log(`📥 GET /api/course-material-stats (compatibility)`);
             
@@ -467,14 +457,6 @@ app.delete("/api/course-material-assignments/course/:courseId/material/:material
             res.json(stats);
 
         } catch (error) {
-            // Ensure CORS headers are set even on error
-            if (origin && allowedOrigins.includes(origin)) {
-                res.setHeader("Access-Control-Allow-Origin", origin);
-                res.setHeader("Access-Control-Allow-Credentials", "true");
-                res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-                res.setHeader("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
-            }
-            
             console.error("❌ Error fetching course statistics:", error);
             res.status(500).json({
                 success: false,

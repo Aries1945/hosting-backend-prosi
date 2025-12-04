@@ -11,9 +11,10 @@ const allowedOrigins = [
   "https://sibaso.site"
 ];
 
-// ✅ CORS Configuration - ULTRA SIMPLE - Let CORS middleware handle everything
+// ✅ CORS Configuration - SIMPLE AND DIRECT
 const corsOptions = {
   origin: function (origin, callback) {
+    // Log untuk debugging
     console.log(`🔍 CORS Origin Check: ${origin || '(no origin)'}`);
     
     // Allow requests dengan no origin (Postman, mobile apps, dll)
@@ -43,25 +44,80 @@ const corsOptions = {
     "Expires"
   ],
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  preflightContinue: false
 };
 
-// ✅ Apply CORS middleware FIRST - handles ALL CORS including OPTIONS
+// ✅ CRITICAL: Handle OPTIONS requests untuk course-material-stats FIRST
+// Handler khusus ini harus dipanggil SEBELUM middleware umum
+app.options("/api/course-material-stats", (req, res) => {
+  const origin = req.headers.origin;
+  console.log(`🔍 OPTIONS Preflight for /api/course-material-stats from: ${origin || '(no origin)'}`);
+  
+  if (origin && allowedOrigins.includes(origin)) {
+    console.log(`✅ OPTIONS Allowed for course-material-stats: ${origin}`);
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Max-Age", "86400");
+    return res.status(200).end();
+  }
+  
+  // Tetap kirim response meskipun origin tidak diizinkan
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  return res.status(200).end();
+});
+
+// ✅ CRITICAL: Handle OPTIONS requests FIRST - before CORS middleware
+// Ini memastikan preflight requests ditangani dengan benar
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    const origin = req.headers.origin;
+    const path = req.path || req.url;
+    console.log(`🚨 OPTIONS Request caught early: ${path} from: ${origin || '(no origin)'}`);
+    
+    if (origin && allowedOrigins.includes(origin)) {
+      console.log(`✅ OPTIONS Allowed early for: ${origin} on path: ${path}`);
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Access-Control-Max-Age", "86400");
+      return res.status(200).end();
+    }
+    
+    // Tetap kirim response untuk debugging
+    if (origin) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+    }
+    return res.status(200).end();
+  }
+  next();
+});
+
+// ✅ Apply CORS middleware - handles both OPTIONS and actual requests
 app.use(cors(corsOptions));
 
-// ✅ Explicit OPTIONS handler untuk SEMUA routes - backup protection
+// ✅ Explicit OPTIONS handler for all routes (backup)
 app.options("*", cors(corsOptions));
 
 // ✅ Safety net: Pastikan CORS headers SELALU ada untuk SEMUA response
+// OPTIONS sudah dihandle di middleware sebelumnya, jadi skip di sini
 app.use((req, res, next) => {
+  // Skip OPTIONS - sudah dihandle sebelumnya
+  if (req.method === "OPTIONS") {
+    return next();
+  }
+  
   const origin = req.headers.origin;
   
   // Set CORS headers untuk SEMUA response jika origin diizinkan
   if (origin && allowedOrigins.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
   }
   
   next();
