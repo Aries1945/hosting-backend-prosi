@@ -54,22 +54,19 @@ app.use(cors(corsOptions));
 // ✅ Explicit OPTIONS handler for all routes (backup)
 app.options("*", cors(corsOptions));
 
-// ✅ Safety net: Pastikan CORS headers SELALU ada untuk SEMUA response
+// ✅ Safety net: Pastikan CORS headers SELALU ada untuk SEMUA response (kecuali OPTIONS - sudah dihandle CORS middleware)
 app.use((req, res, next) => {
+  // JANGAN handle OPTIONS di sini - biarkan CORS middleware yang handle
+  if (req.method === "OPTIONS") {
+    return next(); // Biarkan CORS middleware handle OPTIONS
+  }
+  
   const origin = req.headers.origin;
   
   // Set CORS headers untuk SEMUA response jika origin diizinkan
   if (origin && allowedOrigins.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Authorization, x-access-token, Origin, X-Requested-With, Content-Type, Accept, Cache-Control, Pragma, Expires");
-  }
-  
-  // Handle OPTIONS requests explicitly
-  if (req.method === "OPTIONS") {
-    console.log(`🚨 OPTIONS Request: ${req.path || req.url} from: ${origin || '(no origin)'}`);
-    return res.status(200).end();
   }
   
   next();
